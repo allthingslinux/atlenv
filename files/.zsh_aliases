@@ -18,3 +18,9 @@ alias dcu='docker compose up -d'
 alias dcd='docker compose down'
 alias dcr='docker compose restart'
 alias dsh='docker exec -it $1 bash'
+
+# tmux
+alias tmuxstart='tmux new-session -s $1'
+alias tmuxattach='tmux attach-session -t $1'
+alias tmuxkill='tmux kill-session -t $1'
+alias tmuxlist='tmux list-sessions'
