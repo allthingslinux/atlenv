@@ -1,9 +1,8 @@
 #!/bin/bash
 
-# color presets
+# Color presets
 text_info=135
 text_error=196
-text_success=46
 
 # Required commands to check
 required_commands=(
@@ -12,15 +11,13 @@ required_commands=(
     "thefuck"
     "gum"
     "starship"
+    "stow"
 )
 
-files_to_symlink=(
-    ".zshrc"
-    ".zsh_aliases"
-    "bin/"
-)
-
-symlink_to_dir=$HOME
+# Define your package name for stow.
+# This should correspond to a subdirectory that contains your dotfiles.
+package="files"
+stow_target=$HOME
 
 # Check if zsh is the default shell
 if [ "$SHELL" != "$(which zsh)" ]; then
@@ -38,70 +35,51 @@ done
 
 gum log -t rfc822 -s -l info "All required commands are installed."
 
-symlink_confirm() {
-    gum style --foreground "$text_info" "You are about to symlink/unsymlink the following files to $symlink_to_dir:"
-    for file in "${files_to_symlink[@]}"; do
-        gum style --foreground "$text_info" "$file"
-    done
-    gum confirm "Please confirm the above information is correct" || {
+stow_confirm() {
+    gum style --foreground "$text_info" "You are about to process the package '$package' using GNU Stow to the target directory $stow_target."
+    gum confirm "Is this correct?" || {
         gum log -t rfc822 -s -l error "Operation cancelled."
         exit 1
     }
 }
 
-symlink_add() {
-    for file in "${files_to_symlink[@]}"; do
-        if [ -e "$symlink_to_dir/$file" ]; then
-            # log and quit
-            gum log -t rfc822 -s -l error "$file already exists in $symlink_to_dir. Please remove it first."
-        fi
-        gum log -t rfc822 -s -l info "Creating symlink for $file in $symlink_to_dir"
-        ln -s "$(pwd)/$file" "$symlink_to_dir/$file"
-    done
+stow_apply() {
+    gum log -t rfc822 -s -l info "Applying stow for package '$package' to $stow_target"
+    stow -t "$stow_target" -v "$package"
 }
 
-symlink_remove() {
-    for file in "${files_to_symlink[@]}"; do
-        if [ ! -e "$symlink_to_dir/$file" ]; then
-            # log and quit
-            gum log -t rfc822 -s -l error "$file does not exist in $symlink_to_dir. Please check the path."
-        fi
-        gum log -t rfc822 -s -l info "Removing symlink for $file in $symlink_to_dir"
-        rm "$symlink_to_dir/$file"
-    done
+stow_remove() {
+    gum log -t rfc822 -s -l info "Removing stow symlinks for package '$package' from $stow_target"
+    stow -t "$stow_target" -v -D "$package"
 }
 
-symlink_check() {
-    for file in "${files_to_symlink[@]}"; do
-        if [ -L "$symlink_to_dir/$file" ]; then
-            gum log -t rfc822 -s -l info "$file is a symlink in $symlink_to_dir"
-        else
-            gum log -t rfc822 -s -l error "$file is not a symlink in $symlink_to_dir"
-        fi
-    done
+stow_check() {
+    gum log -t rfc822 -s -l info "Performing a dry run for stow on package '$package' to $stow_target"
+    stow -t "$stow_target" -v -n "$package"
 }
 
 options=(
-    "Symlink files"
-    "Remove symlinks"
-    "Check symlinks"
+    "Stow files"
+    "Unstow files"
+    "Dry run check"
 )
-# use gum choose to display options
+
+# Use gum choose to display options
 selected=$(gum choose --header "Please select a command" "${options[@]}")
 gum log -t rfc822 -s -l info "You selected: $selected"
 case $selected in
-    "Symlink files")
-        symlink_confirm
-        symlink_add
-        gum log -t rfc822 -s -l success "Symlinks created successfully."
+    "Stow files")
+        stow_confirm
+        stow_apply
+        gum log -t rfc822 -s -l info "Files stowed successfully."
         ;;
-    "Remove symlinks")
-        symlink_confirm
-        symlink_remove
-        gum log -t rfc822 -s -l success "Symlinks removed successfully."
+    "Unstow files")
+        stow_confirm
+        stow_remove
+        gum log -t rfc822 -s -l info "Files unstowed successfully."
         ;;
-    "Check symlinks")
-        symlink_check
+    "Dry run check")
+        stow_check
         ;;
     *)
         gum log -t rfc822 -s -l error "Invalid option selected."

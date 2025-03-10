@@ -1,0 +1,40 @@
+layout {
+    new_tab_template {
+    pane size=1 split_direction="vertical" {
+        pane borderless=true {
+		plugin location="file:~/.config/zellij/plugins/zj-status-bar.wasm"
+	}
+	pane size="25" borderless=true {
+		plugin location="file:~/.config/zellij/plugins/zellij-what-time.wasm"
+	}
+    }
+    pane split_direction="vertical" {
+	    pane
+	    pane
+    }
+    pane size=1 borderless=true {
+        plugin location="status-bar"
+    }
+    }
+
+   tab name="main" {
+    pane size=1 split_direction="vertical" {
+        pane borderless=true {
+		plugin location="file:~/.config/zellij/plugins/zj-status-bar.wasm"
+	}
+	pane size="25" borderless=true {
+		plugin location="file:~/.config/zellij/plugins/zellij-what-time.wasm"
+	}
+    }
+    pane split_direction="vertical" {
+	    pane command="weechat"
+	    pane split_direction="horizontal" size="90" {
+		pane size=26 command="btop"
+		pane command="fastfetch"
+	}
+    }
+    pane size=1 borderless=true {
+        plugin location="status-bar"
+    }
+    }
+}
