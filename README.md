@@ -17,6 +17,8 @@ Environment preset for All Things Linux servers.
 - thefuck
 - https://github.com/charmbracelet/gum
 - starship
+- stow
+- zsh syntax highlighting and autosuggestions
 
 ### Install
 Run ./manager.sh to manage the installation of the environment preset. This will:
