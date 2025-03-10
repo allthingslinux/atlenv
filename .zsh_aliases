@@ -1,0 +1,20 @@
+#!/bin/bash
+# Eza is a modern replacement for ls
+alias ls='eza --color=auto'
+alias ll='eza -l'
+alias la='eza -la'
+alias l='eza -lA'
+
+# Grep with color
+alias grep='grep --color=auto'
+
+# Zoxide
+alias cd='z'
+
+# Docker
+alias d='docker'
+alias dc='docker compose'
+alias dcu='docker compose up -d'
+alias dcd='docker compose down'
+alias dcr='docker compose restart'
+alias dsh='docker exec -it $1 bash'

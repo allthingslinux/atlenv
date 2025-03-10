@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Function to check if a port is available
+is_port_available() {
+    local port=$1
+    local host=${2:-127.0.0.1}
+
+    # Check if the port is free using netcat
+    nc -zv "$host" "$port" &>/dev/null
+    if [ $? -eq 0 ]; then
+        echo -e "\x1b[30;41;1mPort $port is in use on $host.\x1b[0m"
+        echo -e "\x1b[33;1mChecking using the command lsof -i :$port\x1b[0m"
+        echo -e "\x1b[33;1mPID(s):\x1b[0m"
+        lsof -i :$port
+        return 1
+    else
+        echo -e "\x1b[32;1mPort $port is available on $host.\x1b[0m"
+        return 0
+    fi
+}
+
+# Example usage: Pass command-line arguments to the function
+is_port_available "$1" "$2"

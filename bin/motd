@@ -1,0 +1,261 @@
+#!/bin/bash
+# "system stats"
+echo -e "\x1b[30;46;1m<system stats>\x1b[0m"
+
+get_color() {
+    # percentage is passed as argument
+    local percentage=$1
+
+    # convert percentage to integer
+    percentage=${percentage%.*}
+
+    if [ $percentage -lt 50 ]; then
+        echo -e "\x1b[32m" # green
+    elif [ $percentage -ge 50 ] && [ $percentage -lt 75 ]; then
+        echo -e "\x1b[33m" # yellow
+    else
+        echo -e "\x1b[31m" # red
+    fi
+}
+
+get_cpu_usage() {
+    # if usage is below 50%, color is green, between 50-75% is yellow, above 75% is red
+    local cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+    local color=$(get_color $cpu_usage)
+    echo -e "\x1b[35;1mCPU Usage: $color$cpu_usage%\x1b[0m"
+}
+
+get_memory_usage() {
+    # if usage is below 50%, color is green, between 50-75% is yellow, above 75% is red
+    local free=$(free -m)
+    local memory_usage_percentage=$(echo "$free" | grep Mem | awk '{print $3/$2 * 100}' | xargs printf "%.*f\n" 1)
+    local memory_usage_mb=$(echo "$free" | grep Mem | awk '{print $3}')
+    local memory_total_mb=$(echo "$free" | grep Mem | awk '{print $2}')
+    local color=$(get_color $memory_usage_percentage)
+    echo -e "\x1b[35;1mMemory Usage: $color$memory_usage_percentage% ($memory_usage_mb MB / $memory_total_mb MB)\x1b[0m"
+}
+
+get_uptime() {
+    local uptime=$(uptime -p)
+    # if uptime is less than 2 weeks, color is green, between 2-4 weeks is yellow, above 4 weeks is red
+    local uptime_color=""
+    local days_for_yellow=28
+    local days_for_red=56
+    local uptime_days=$(uptime -s | xargs -I {} sh -c 'echo $((($(date +%s) - $(date -d "{}" +%s)) / 86400))')
+    if [ $uptime_days -lt $days_for_yellow ]; then
+        uptime_color="\x1b[32m" # green
+    elif [ $uptime_days -ge $days_for_yellow ] && [ $uptime_days -lt $days_for_red ]; then
+        uptime_color="\x1b[33m" # yellow
+    else
+        uptime_color="\x1b[31m" # red
+    fi
+    echo -e "\x1b[35;1mUptime: $uptime_color$uptime\x1b[0m"
+}
+
+get_processes_count() {
+    local processes_count=$(ps -A --no-headers | wc -l)
+    # if processes count is less than 100, color is green, between 100-200 is yellow, above 200 is red
+    local processes_color=""
+    local processes_yellow=600
+    local processes_red=1000
+    if [ $processes_count -lt $processes_yellow ]; then
+        processes_color="\x1b[32m" # green
+    elif [ $processes_count -ge $processes_yellow ] && [ $processes_count -lt $processes_red ]; then
+        processes_color="\x1b[33m" # yellow
+    else
+        processes_color="\x1b[31m" # red
+    fi
+    echo -e "\x1b[35;1mProcesses: $processes_color$processes_count\x1b[0m"
+}
+
+get_cpu_usage
+get_memory_usage
+get_uptime
+get_processes_count
+
+echo -e "\n\x1b[30;46;1m<disk stats>\x1b[0m\n"
+
+generate_bar() {
+    # argument 1 is the percentage of the bar that should be filled
+    local percentage=$1
+
+    # argument 2 is the total length of the bar
+    local total_length=$2
+
+    # argument 3 is the filled color of the bar
+    local base_color=$3
+
+    # argument 4 is the unfilled color of the bar
+    local unfilled_color=$4
+
+    local char="-"
+
+    # calculate the number of characters that should be filled
+    local fill_length=$(echo "$percentage * $total_length / 100" | bc | xargs printf "%.*f\n" 0)
+
+    # calculate the number of characters that should be unfilled
+    local unfilled_length=$((total_length - fill_length))
+
+    # print the filled part of the bar
+    printf "%s" "$base_color"
+    for ((i = 0; i < fill_length; i++)); do
+        printf "%s" "$char"
+    done
+
+    # print the unfilled part of the bar
+    printf "%s" "$unfilled_color"
+    for ((i = 0; i < unfilled_length; i++)); do
+        printf "%s" "$char"
+    done
+
+    # reset the color
+    echo -e "\x1b[0m"
+}
+
+get_disks_usage() {
+    # Get disk usage information and longest mount point name
+    local ignore_mounts="/run|/sys|/proc|/var|/snap|/.snapshots|/dev"
+    local disks_info=($(df -h --output=target,used,size,pcent | tail -n +2 | grep -Ev "$ignore_mounts" | awk '{print $1, $2, $3, $4}'))
+
+    local longest_mount=$(echo "${disks_info[@]}" | tr ' ' '\n' | awk '{print length, $0}' | sort -n -s | tail -n 1 | cut -d' ' -f 2-)
+    local max_length=${#longest_mount}
+
+    # Define color codes
+    local RED='\033[0;31m'
+    local YELLOW='\033[0;33m'
+    local GREEN='\033[0;32m'
+    local GRAY='\033[0;37m'
+    local NC='\033[0m'  # No Color
+
+    # Iterate through the disk info
+    for ((i = 0; i < ${#disks_info[@]}; i += 4)); do
+        local mount_point=${disks_info[i]}
+        local used=${disks_info[i+1]}
+        local total=${disks_info[i+2]}
+        local pcent=${disks_info[i+3]}
+
+        # Remove the percentage sign for calculation
+        local pcent_value=${pcent%\%}
+
+        # Determine color based on usage percentage
+        if (( pcent_value >= 80 )); then
+            local color=$RED
+        elif (( pcent_value >= 50 )); then
+            local color=$YELLOW
+        else
+            local color=$GREEN
+        fi
+
+        local bar_length=50
+        local bar=$(generate_bar $pcent_value $bar_length $color $GRAY)
+
+        # Print formatted output
+        echo -e "${mount_point}$(printf "%$(($max_length - ${#mount_point}))s") ${color}${used}/${total} (${pcent})${NC}"
+        echo -e "${color}  ${GRAY}${bar}${NC}"
+    done
+}
+
+
+get_disks_usage
+
+
+echo -e "\n\x1b[30;46;1m<ssh>\x1b[0m"
+
+get_fail2ban_bans() {
+    local bans=$(fail2ban-client status sshd | grep "Currently banned" | awk '{print $4}')
+    if [ -z "$bans" ]; then
+        echo -e "\x1b[32mNo bans\x1b[0m"
+    else
+        echo -e "\x1b[31m$bans bans\x1b[0m"
+    fi
+}
+
+get_sessions_info() {
+    local sessions=$(last | grep "still logged in")
+    if [ -z "$sessions" ]; then
+        echo -e "\x1b[32mNo active sessions\x1b[0m"
+    else
+        echo -e "\x1b[31m$sessions\x1b[0m"
+    fi
+}
+
+get_fail2ban_bans
+get_sessions_info
+
+echo -e "\n\x1b[30;46;1m<services>\x1b[0m"
+
+check_services() {
+    local services=("docker" "sshd" "fail2ban")
+    
+    for service in "${services[@]}"; do
+        local status=$(systemctl is-active $service)
+        local color=""
+        if [ "$status" == "active" ]; then
+            color="\x1b[32m●\x1b[0m"
+        elif [ "$status" == "inactive" ]; then
+            color="\x1b[30m○\x1b[0m"
+        elif [ "$status" == "failed" ]; then
+            color="\x1b[31m󰯈\x1b[0m"
+        else
+            color="\x1b[33m◐\x1b[0m"
+        fi
+        echo -e "$color $service"
+    done
+}
+
+check_container() {
+    local containers=("tux" "cadvisor" "prometheus" "grafana" "privatebin" "vaultwarden" "cyber-chef" "nginx-proxy-manager" "mailcow-dockerized")
+    
+    for container in "${containers[@]}"; do
+        local status=$(docker ps -q -f name=$container)
+        local color=""
+        if [ -n "$status" ]; then
+            color="\x1b[32m●\x1b[0m"
+        else
+            color="\x1b[30m○\x1b[0m"
+        fi
+        echo -e "$color $container"
+    done
+}
+
+check_services
+check_container
+
+echo -e "\n\x1b[30;46;1m<misc>\x1b[0m"
+check_updates_apt() {
+    local updates=$(apt list --upgradable 2>/dev/null | grep -c upgradable)
+    if [ $updates -eq 0 ]; then
+        echo -e "\x1b[32mNo updates\x1b[0m"
+    else
+        echo -e "\x1b[31m$updates updates\x1b[0m"
+    fi
+}
+
+check_updates_apt
+
+random_messages=(
+    "remember: rm -rf / will delete all your files"
+    "ips are like toothbrushes. never share them"
+    "dont be a idiot"
+    "think twice before you hit enter"
+    "never gonna give you up, never gonna let you down, never gonna run around and desert you"
+    "do you actually read these messages?"
+    "trans rights are human rights"
+    "i am in your walls"
+    "tip: you can add more messages to this script by editing ~/motd.sh line ~245"
+)
+
+random_colors=(
+    "\x1b[31m"
+    "\x1b[32m"
+    "\x1b[33m"
+    "\x1b[34m"
+    "\x1b[35m"
+    "\x1b[36m"
+    "\x1b[37m"
+)
+
+random_message=${random_messages[$RANDOM % ${#random_messages[@]}]}
+random_color=${random_colors[$RANDOM % ${#random_colors[@]}]}
+echo -e "$random_color$random_message\x1b[0m"
+echo -e "\x1b[30;41;1;3mYOU ARE LOGGED IN AS ROOT. THINK *THRICE* BEFORE HITTING ENTER.\x1b[0m\n"
