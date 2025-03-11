@@ -8,7 +8,7 @@ eval "$(zoxide init zsh)"
 eval $(thefuck --alias)
 
 # aliases
-source .zsh_aliases
+source $HOME/.zsh_aliases
 
 [ "$TERM" = "xterm-kitty" ] && alias ssh="kitty +kitten ssh" # kitty sucks so we have to do this
 
@@ -34,8 +34,8 @@ echo -e "\x1b[35mThe time is \x1b[32m$(date +"%r")\x1b[0m"
 eval "$(starship init zsh)"
 
 # autocomplete & syntax highlighting
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.plugin.zsh
-source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh
+source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 
 end=$(date +%s%N)
 echo -e "\x1b[35mShell loaded in \x1b[32m$((($end - $start) / 1000000))ms!\x1b[0m"
