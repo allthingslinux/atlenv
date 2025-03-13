@@ -17,7 +17,13 @@ required_commands=(
 # Define your package name for stow.
 # This should correspond to a subdirectory that contains your dotfiles.
 package="files"
-stow_target=$HOME
+
+# Set stow_target to /opt/atlenv if it exists, otherwise default to HOME
+if [ -d "/opt/atlenv" ]; then
+    stow_target="/opt/atlenv"
+else
+    stow_target="$HOME"
+fi
 
 # Check if zsh is the default shell
 if [ "$SHELL" != "$(which zsh)" ]; then
