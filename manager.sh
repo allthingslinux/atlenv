@@ -15,8 +15,15 @@ required_commands=(
 )
 
 # Define your package name for stow.
+# This should correspond to a subdirectory that contains your dotfiles.
 package="files"
-stow_target=$HOME
+
+# Set stow_target to /opt/atlenv if it exists, otherwise default to HOME
+if [ -d "/opt/atlenv" ]; then
+    stow_target="/opt/atlenv"
+else
+    stow_target="$HOME"
+fi
 
 # Check if zsh is the default shell
 if [ "$SHELL" != "$(which zsh)" ]; then
@@ -32,51 +39,56 @@ for cmd in "${required_commands[@]}"; do
     fi
 done
 
-echo "All required commands are installed."
+gum log -t rfc822 -s -l info "All required commands are installed."
+
+stow_confirm() {
+    gum style --foreground "$text_info" "You are about to process the package '$package' using GNU Stow to the target directory $stow_target."
+    gum confirm "Is this correct?" || {
+        gum log -t rfc822 -s -l error "Operation cancelled."
+        exit 1
+    }
+}
 
 stow_apply() {
-    echo "Applying stow for package '$package' to $stow_target"
+    gum log -t rfc822 -s -l info "Applying stow for package '$package' to $stow_target"
     stow -t "$stow_target" -v "$package"
 }
 
 stow_remove() {
-    echo "Removing stow symlinks for package '$package' from $stow_target"
+    gum log -t rfc822 -s -l info "Removing stow symlinks for package '$package' from $stow_target"
     stow -t "$stow_target" -v -D "$package"
 }
 
 stow_check() {
-    echo "Performing a dry run for stow on package '$package' to $stow_target"
+    gum log -t rfc822 -s -l info "Performing a dry run for stow on package '$package' to $stow_target"
     stow -t "$stow_target" -v -n "$package"
 }
 
-# Simulate default choice for automation
-if [ -t 0 ]; then
-    options=(
-        "Stow files"
-        "Unstow files"
-        "Dry run check"
-    )
+options=(
+    "Stow files"
+    "Unstow files"
+    "Dry run check"
+)
 
-    selected=$(printf "%s\n" "${options[@]}" | gum choose --header "Please select a command")
-else
-    selected="Stow files"  # Default choice in automation mode
-fi
-
-echo "You selected: $selected"
+# Use gum choose to display options
+selected=$(gum choose --header "Please select a command" "${options[@]}")
+gum log -t rfc822 -s -l info "You selected: $selected"
 case $selected in
     "Stow files")
+        stow_confirm
         stow_apply
-        echo "Files stowed successfully."
+        gum log -t rfc822 -s -l info "Files stowed successfully."
         ;;
     "Unstow files")
+        stow_confirm
         stow_remove
-        echo "Files unstowed successfully."
+        gum log -t rfc822 -s -l info "Files unstowed successfully."
         ;;
     "Dry run check")
         stow_check
         ;;
     *)
-        echo "Invalid option selected."
+        gum log -t rfc822 -s -l error "Invalid option selected."
         exit 1
         ;;
 esac
