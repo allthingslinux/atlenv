@@ -21,6 +21,8 @@ package="files"
 # Set stow_target to /opt/atlenv if it exists, otherwise default to HOME
 if [ -d "/opt/atlenv" ]; then
     stow_target="/opt/atlenv"
+    stow_apply
+    gum log -t rfc822 -s -l info "Files stowed successfully."
 else
     stow_target="$HOME"
 fi
