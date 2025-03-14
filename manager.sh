@@ -18,15 +18,6 @@ required_commands=(
 # This should correspond to a subdirectory that contains your dotfiles.
 package="files"
 
-# Set stow_target to /opt/atlenv if it exists, otherwise default to HOME
-if [ -d "/opt/atlenv" ]; then
-    stow_target="/opt/atlenv"
-    stow_apply
-    gum log -t rfc822 -s -l info "Files stowed successfully."
-else
-    stow_target="$HOME"
-fi
-
 # Check if zsh is the default shell
 if [ "$SHELL" != "$(which zsh)" ]; then
     echo "Zsh is not the default shell. Please set it as the default shell."
@@ -71,6 +62,16 @@ options=(
     "Unstow files"
     "Dry run check"
 )
+
+# Set stow_target to /opt/atlenv if it exists, otherwise default to HOME
+if [ -d "/opt/atlenv" ]; then
+    stow_target="/opt/atlenv"
+    stow_apply
+    gum log -t rfc822 -s -l info "Files stowed successfully."
+    exit 1
+else
+    stow_target="$HOME"
+fi
 
 # Use gum choose to display options
 selected=$(gum choose --header "Please select a command" "${options[@]}")
